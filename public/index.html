@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parcels Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 30px; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 800px; margin: auto; }
+        .card-form { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .form-group { margin-bottom: 12px; }
+        .form-group input { width: 97%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .parcel-card { background: white; border-left: 5px solid #007bff; padding: 15px; margin-bottom: 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .parcel-card h3 { margin: 0 0 8px 0; color: #007bff; }
+        .badge { background: #28a745; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2> Add New Parcel</h2>
+        <form id="add-parcel-form" class="card-form">
+            <div class="form-group"><input type="text" id="parcel_id" placeholder="Parcel ID (e.g. p102)" required></div>
+            <div class="form-group"><input type="text" id="title" placeholder="Title (e.g. Sunrise Villa)" required></div>
+            <div class="form-group"><input type="text" id="owner_name" placeholder="Owner Name" required></div>
+            <div class="form-group"><input type="number" id="area_sq_ft" placeholder="Area (sq ft)" required></div>
+            <div class="form-group"><input type="text" id="status" placeholder="Status (e.g. vacant)" required></div>
+            <button type="submit">Add Parcel</button>
+        </form>
+
+        <h2> Parcels List</h2>
+        <div id="parcels-container">Loading parcels...</div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -16,21 +16,63 @@ app.get('/api/parcels', (req, res) => {
     if (err) {
       return res.status(500).json({ error: err.message });
     }
-    res.json({ parcels: rows });
+
+    // Coordinates ko JSON string se Javascript object/array me parse karke bhejna
+    const formattedRows = rows.map(row => {
+      let parsedCoords = row.coordinates;
+      try {
+        if (typeof row.coordinates === 'string') {
+          parsedCoords = JSON.parse(row.coordinates);
+        }
+      } catch (e) {
+        parsedCoords = [];
+      }
+      return { ...row, coordinates: parsedCoords };
+    });
+
+    res.json(formattedRows);
   });
 });
 
 // 2. Add a new parcel
 app.post('/api/parcels', (req, res) => {
-  const { id, title, coordinates, area_sq_ft, status, owner_name } = req.body;
-  const sql = `INSERT INTO parcels (id, title, coordinates, area_sq_ft, status, owner_name) VALUES (?, ?, ?, ?, ?, ?)`;
-  const params = [id, title, JSON.stringify(coordinates || []), area_sq_ft, status || 'vacant', owner_name];
+  const {
+    id, title, coordinates, area_sq_ft, status, owner_name,
+    flat_number, rent, phone_number, address, elevation,
+    number_of_floors, building_height, usage, volumetric_space
+  } = req.body;
+
+  const sql = `
+    INSERT INTO parcels (
+      id, title, coordinates, area_sq_ft, status, owner_name,
+      flat_number, rent, phone_number, address, elevation,
+      number_of_floors, building_height, usage, volumetric_space
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  const params = [
+    id || `p_${Date.now()}`,
+    title,
+    JSON.stringify(coordinates || []),
+    area_sq_ft,
+    status || 'vacant',
+    owner_name,
+    flat_number,
+    rent,
+    phone_number,
+    address,
+    elevation,
+    number_of_floors,
+    building_height,
+    usage,
+    volumetric_space
+  ];
 
   db.run(sql, params, function (err) {
     if (err) {
       return res.status(400).json({ error: err.message });
     }
-    res.json({ message: 'Parcel added successfully!', id });
+    res.json({ message: 'Parcel added successfully!', id: id || this.lastID });
   });
 });
 

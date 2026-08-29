@@ -1,226 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Parcels Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-        }
-
-        body {
-            min-height: 100vh;
-            background: #0f172a;
-            background-image: 
-                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
-                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
-            color: #f8fafc;
-            padding: 40px 20px;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        h2 {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 18px;
-            color: #f1f5f9;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .card-form {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-            margin-bottom: 35px;
-        }
-
-        .form-group {
-            margin-bottom: 14px;
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 12px 16px;
-            background: rgba(15, 23, 42, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            color: #ffffff;
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.2s ease;
-        }
-
-        .form-group input::placeholder {
-            color: #64748b;
-        }
-
-        .form-group input:focus {
-            border-color: #818cf8;
-            box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2);
-            background: rgba(15, 23, 42, 0.9);
-        }
-
-        button {
-            width: 100%;
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            color: white;
-            border: none;
-            padding: 12px 15px;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
-            margin-top: 6px;
-        }
-
-        button:hover {
-            opacity: 0.95;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
-        }
-
-        .parcel-card {
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-left: 4px solid #818cf8;
-            padding: 18px 20px;
-            margin-bottom: 14px;
-            border-radius: 12px;
-            transition: all 0.2s ease;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .parcel-card:hover {
-            transform: translateY(-2px);
-            background: rgba(30, 41, 59, 0.8);
-            border-color: rgba(255, 255, 255, 0.15);
-        }
-
-        .parcel-card h3 {
-            margin: 0 0 6px 0;
-            color: #38bdf8;
-            font-size: 1.1rem;
-        }
-
-        .parcel-meta {
-            font-size: 0.85rem;
-            color: #94a3b8;
-            display: flex;
-            gap: 15px;
-        }
-
-        .badge {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            border: 1px solid rgba(52, 211, 153, 0.3);
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: capitalize;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parcel Management Dashboard</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #38bdf8;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: #1e293b;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+    }
+    th {
+      background-color: #334155;
+      color: #38bdf8;
+    }
+    tr:nth-child(even) {
+      background-color: #1e293b;
+    }
+    tr:nth-child(odd) {
+      background-color: #0f172a;
+    }
+    .badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: bold;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .badge-vacant { background-color: #22c55e; color: #000; }
+    .badge-occupied { background-color: #ef4444; color: #fff; }
+    .badge-owned { background-color: #eab308; color: #000; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h2>✨ Add New Parcel</h2>
-        <form id="add-parcel-form" class="card-form">
-            <div class="form-group"><input type="text" id="parcel_id" placeholder="Parcel ID (e.g. p102)" required></div>
-            <div class="form-group"><input type="text" id="title" placeholder="Title (e.g. Sunrise Villa)" required></div>
-            <div class="form-group"><input type="text" id="owner_name" placeholder="Owner Name" required></div>
-            <div class="form-group"><input type="number" id="area_sq_ft" placeholder="Area (sq ft)" required></div>
-            <div class="form-group"><input type="text" id="status" placeholder="Status (e.g. vacant)" required></div>
-            <button type="submit">Add Parcel</button>
-        </form>
+  <div class="container">
+    <h1>📍 Parcel Management System</h1>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Title</th>
+          <th>Owner</th>
+          <th>Status</th>
+          <th>Area (sq ft)</th>
+        </tr>
+      </thead>
+      <tbody id="parcel-table-body">
+        <tr>
+          <td colspan="5" style="text-align:center;">Loading data...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-        <h2>📦 Parcels List</h2>
-        <div id="parcels-container">Loading parcels...</div>
-    </div>
-
-    <!-- Script included to connect directly with Backend API -->
-    <script>
-        const API_URL = '/api/parcels';
-
-        async function loadParcels() {
-            try {
-                const res = await fetch(API_URL);
-                const data = await res.json();
-                const container = document.getElementById('parcels-container');
-                
-                if (!data.parcels || data.parcels.length === 0) {
-                    container.innerHTML = '<p style="color: #94a3b8;">No parcels registered yet.</p>';
-                    return;
-                }
-
-                container.innerHTML = data.parcels.map(p => `
-                    <div class="parcel-card">
-                        <div>
-                            <h3>${p.title} <span style="font-size: 0.8rem; color: #818cf8;">(${p.id})</span></h3>
-                            <div class="parcel-meta">
-                                <span>👤 Owner: ${p.owner_name || 'N/A'}</span>
-                                <span>📐 Area: ${p.area_sq_ft ? p.area_sq_ft + ' sq ft' : 'N/A'}</span>
-                            </div>
-                        </div>
-                        <div>
-                            <span class="badge">${p.status || 'vacant'}</span>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (err) {
-                console.error('Error fetching parcels:', err);
-                document.getElementById('parcels-container').innerHTML = '<p style="color: #ef4444;">Failed to load parcels.</p>';
-            }
-        }
-
-        document.getElementById('add-parcel-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const newParcel = {
-                id: document.getElementById('parcel_id').value,
-                title: document.getElementById('title').value,
-                owner_name: document.getElementById('owner_name').value,
-                area_sq_ft: Number(document.getElementById('area_sq_ft').value),
-                status: document.getElementById('status').value,
-                coordinates: [77.5946, 12.9716]
-            };
-
-            try {
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(newParcel)
-                });
-
-                if (res.ok) {
-                    document.getElementById('add-parcel-form').reset();
-                    loadParcels();
-                } else {
-                    alert('Failed to add parcel!');
-                }
-            } catch (err) {
-                console.error('Error adding parcel:', err);
-            }
-        });
-
-        loadParcels();
-    </script>
+  <script src="script.js"></script>
 </body>
 </html>

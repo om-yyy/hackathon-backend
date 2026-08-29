@@ -1,55 +1,39 @@
-// 1. Backend se Parcels fetch karke screen par dikhana
-function loadParcels() {
-    fetch('/api/parcels')
-        .then(res => res.json())
-        .then(data => {
-            const container = document.getElementById('parcels-container');
-            container.innerHTML = '';
-
-            if (data.parcels && data.parcels.length > 0) {
-                data.parcels.forEach(p => {
-                    container.innerHTML += `
-                        <div class="parcel-card">
-                            <h3>${p.title || 'No Title'} <span class="badge">${p.status || 'N/A'}</span></h3>
-                            <p><strong>ID:</strong> ${p.id}</p>
-                            <p><strong>Owner:</strong> ${p.owner_name || 'Unknown'}</p>
-                            <p><strong>Area:</strong> ${p.area_sq_ft || 0} sq ft</p>
-                        </div>
-                    `;
-                });
-            } else {
-                container.innerHTML = '<p>No parcels found.</p>';
-            }
-        })
-        .catch(err => console.error("Error loading parcels:", err));
-}
-
-// 2. Frontend Form se Direct Naya Parcel Add Karna
-document.getElementById('add-parcel-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    const newParcel = {
-        id: document.getElementById('parcel_id').value,
-        title: document.getElementById('title').value,
-        owner_name: document.getElementById('owner_name').value,
-        area_sq_ft: Number(document.getElementById('area_sq_ft').value),
-        status: document.getElementById('status').value,
-        coordinates: "[77.10, 28.57]"
-    };
-
-    fetch('/api/parcels', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newParcel)
-    })
-    .then(res => res.json())
+document.addEventListener('DOMContentLoaded', () => {
+  fetch('/api/parcels')
+    .then(response => response.json())
     .then(data => {
-        alert("Parcel Added Successfully!");
-        document.getElementById('add-parcel-form').reset();
-        loadParcels(); // List refresh karo
-    })
-    .catch(err => console.error("Error adding parcel:", err));
-});
+      const tableBody = document.getElementById('parcel-table-body');
+      tableBody.innerHTML = '';
 
-// Initial load
-loadParcels();
+      // Handle both array format and object format safely
+      const parcels = Array.isArray(data) ? data : (data.parcels || []);
+
+      if (parcels.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No parcels found.</td></tr>';
+        return;
+      }
+
+      parcels.forEach(parcel => {
+        const row = document.createElement('tr');
+        
+        let statusClass = 'badge-vacant';
+        const statusLower = (parcel.status || '').toLowerCase();
+        if (statusLower === 'occupied') statusClass = 'badge-occupied';
+        if (statusLower === 'owned') statusClass = 'badge-owned';
+
+        row.innerHTML = `
+          <td><b>${parcel.id}</b></td>
+          <td>${parcel.title || '-'}</td>
+          <td>${parcel.owner_name || '-'}</td>
+          <td><span class="badge ${statusClass}">${parcel.status || 'Vacant'}</span></td>
+          <td>${parcel.area_sq_ft || '-'}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+    })
+    .catch(error => {
+      console.error('Error fetching data:', error);
+      document.getElementById('parcel-table-body').innerHTML = 
+        '<tr><td colspan="5" style="text-align:center; color: #ef4444;">Failed to load data!</td></tr>';
+    });
+});

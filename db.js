@@ -11,11 +11,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
+
 // ===============================
-// PROMISE HELPERS
+// DATABASE HELPERS
 // ===============================
 
-const dbRun = (sql, params = []) => {
+function dbRun(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
       if (err) {
@@ -25,9 +26,10 @@ const dbRun = (sql, params = []) => {
       }
     });
   });
-};
+}
 
-const dbAll = (sql, params = []) => {
+
+function dbAll(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.all(sql, params, (err, rows) => {
       if (err) {
@@ -37,9 +39,10 @@ const dbAll = (sql, params = []) => {
       }
     });
   });
-};
+}
 
-const dbGet = (sql, params = []) => {
+
+function dbGet(sql, params = []) {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => {
       if (err) {
@@ -49,121 +52,138 @@ const dbGet = (sql, params = []) => {
       }
     });
   });
-};
+}
+
 
 // ===============================
 // DATABASE INITIALIZATION
 // ===============================
 
 async function initializeDatabase() {
-  try {
-    // Base table
+
+  // Create parcels table if it doesn't exist
+  await dbRun(`
+    CREATE TABLE IF NOT EXISTS parcels (
+      id TEXT PRIMARY KEY,
+      title TEXT,
+      owner_name TEXT,
+      area_sq_ft REAL,
+      status TEXT,
+      coordinates TEXT,
+      flat_number TEXT,
+      rent REAL,
+      phone_number TEXT,
+      address TEXT,
+      elevation REAL,
+      number_of_floors INTEGER,
+      building_height REAL,
+      usage TEXT,
+      volumetric_space REAL
+    )
+  `);
+
+
+  // Check existing columns
+  const columns = await dbAll(
+    `PRAGMA table_info(parcels)`
+  );
+
+  const existingColumns = columns.map(
+    column => column.name
+  );
+
+
+  // Add missing columns if necessary
+  const additionalColumns = [
+    ['flat_number', 'TEXT'],
+    ['rent', 'REAL'],
+    ['phone_number', 'TEXT'],
+    ['address', 'TEXT'],
+    ['elevation', 'REAL'],
+    ['number_of_floors', 'INTEGER'],
+    ['building_height', 'REAL'],
+    ['usage', 'TEXT'],
+    ['volumetric_space', 'REAL']
+  ];
+
+
+  for (const [name, type] of additionalColumns) {
+
+    if (!existingColumns.includes(name)) {
+
+      await dbRun(
+        `ALTER TABLE parcels ADD COLUMN ${name} ${type}`
+      );
+
+      console.log(`✅ Added column: ${name}`);
+    }
+  }
+
+
+  // Check number of parcels
+  const result = await dbGet(
+    `SELECT COUNT(*) AS count FROM parcels`
+  );
+
+
+  // Add seed data only if database is empty
+  if (result.count === 0) {
+
+    console.log('📦 Database empty. Adding seed data...');
+
     await dbRun(`
-      CREATE TABLE IF NOT EXISTS parcels (
-        id TEXT PRIMARY KEY,
-        title TEXT,
-        owner_name TEXT,
-        area_sq_ft REAL,
-        status TEXT,
-        coordinates TEXT
+      INSERT INTO parcels (
+        id,
+        title,
+        owner_name,
+        area_sq_ft,
+        status,
+        coordinates
+      )
+      VALUES
+      (
+        'p101',
+        'Sunrise Villa',
+        'Rahul Sharma',
+        1200,
+        'occupied',
+        '[77.5946, 12.9716]'
+      ),
+      (
+        'p102',
+        'Green Acres',
+        'Priya Singh',
+        2500,
+        'vacant',
+        '[77.6, 12.975]'
+      ),
+      (
+        'p103',
+        'Ocean View',
+        'Amit Kumar',
+        1800,
+        'vacant',
+        '[77.61, 12.98]'
       )
     `);
 
-    // Additional columns
-    const targetColumns = [
-      { name: 'flat_number', type: 'TEXT' },
-      { name: 'rent', type: 'REAL' },
-      { name: 'phone_number', type: 'TEXT' },
-      { name: 'address', type: 'TEXT' },
-      { name: 'elevation', type: 'REAL' },
-      { name: 'number_of_floors', type: 'INTEGER' },
-      { name: 'building_height', type: 'REAL' },
-      { name: 'usage', type: 'TEXT' },
-      { name: 'volumetric_space', type: 'REAL' }
-    ];
+    console.log('✅ Seed data added');
 
-    const existingColumns = await dbAll(
-      'PRAGMA table_info(parcels)'
+  } else {
+
+    console.log(
+      `ℹ️ Existing database found with ${result.count} parcels`
     );
 
-    const existingColumnNames = existingColumns.map(
-      column => column.name
-    );
-
-    for (const column of targetColumns) {
-      if (!existingColumnNames.includes(column.name)) {
-        await dbRun(
-          `ALTER TABLE parcels ADD COLUMN ${column.name} ${column.type}`
-        );
-
-        console.log(
-          `✅ Added column: ${column.name}`
-        );
-      }
-    }
-
-    // Seed only if database is completely empty
-    const countResult = await dbGet(
-      'SELECT COUNT(*) AS count FROM parcels'
-    );
-
-    if (countResult.count === 0) {
-      console.log('📦 Database empty. Adding seed parcels...');
-
-      await dbRun(`
-        INSERT INTO parcels (
-          id,
-          title,
-          owner_name,
-          area_sq_ft,
-          status,
-          coordinates
-        )
-        VALUES
-        (
-          'p101',
-          'Sunrise Villa',
-          'Rahul Sharma',
-          1200,
-          'occupied',
-          '[77.5946, 12.9716]'
-        ),
-        (
-          'p102',
-          'Green Acres',
-          'Priya Singh',
-          2500,
-          'vacant',
-          '[77.6, 12.975]'
-        ),
-        (
-          'p103',
-          'Ocean View',
-          'Amit Kumar',
-          1800,
-          'vacant',
-          '[77.61, 12.98]'
-        )
-      `);
-
-      console.log('✅ Seed data added');
-    } else {
-      console.log(
-        `ℹ️ Existing database found with ${countResult.count} parcels`
-      );
-    }
-
-    console.log('✅ Database initialization completed');
-
-  } catch (error) {
-    console.error(
-      '❌ Database initialization failed:',
-      error.message
-    );
-
-    throw error;
   }
+
+  console.log('✅ Database initialization completed');
 }
+
+
+// ===============================
+// EXPORT EVERYTHING
+// ===============================
 
 module.exports = {
   db,

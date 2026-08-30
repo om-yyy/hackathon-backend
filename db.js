@@ -2,46 +2,62 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 const dbPath = process.env.DATABASE_URL || path.resolve(__dirname, 'sqlite.db');
-const db = new sqlite3.Database(dbPath);
 
-// Define missing columns to add to schema
-const targetColumns = [
-  { name: 'flat_number', type: 'TEXT' },
-  { name: 'rent', type: 'REAL' },
-  { name: 'phone_number', type: 'TEXT' },
-  { name: 'address', type: 'TEXT' },
-  { name: 'elevation', type: 'REAL' },
-  { name: 'number_of_floors', type: 'INTEGER' },
-  { name: 'building_height', type: 'REAL' },
-  { name: 'usage', type: 'TEXT' },
-  { name: 'volumetric_space', type: 'REAL' }
-];
-
-// Promise wrappers for async/await execution
-const dbRun = (sql, params = []) => new Promise((resolve, reject) => {
-  db.run(sql, params, function (err) {
-    if (err) reject(err);
-    else resolve(this);
-  });
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('❌ SQLite connection error:', err.message);
+  } else {
+    console.log('✅ SQLite database connected');
+  }
 });
 
-const dbAll = (sql, params = []) => new Promise((resolve, reject) => {
-  db.all(sql, params, (err, rows) => {
-    if (err) reject(err);
-    else resolve(rows);
-  });
-});
+// ===============================
+// PROMISE HELPERS
+// ===============================
 
-const dbGet = (sql, params = []) => new Promise((resolve, reject) => {
-  db.get(sql, params, (err, row) => {
-    if (err) reject(err);
-    else resolve(row);
+const dbRun = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(this);
+      }
+    });
   });
-});
+};
 
-async function runSchemaOnlyMigration() {
+const dbAll = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+};
+
+const dbGet = (sql, params = []) => {
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(row);
+      }
+    });
+  });
+};
+
+// ===============================
+// DATABASE INITIALIZATION
+// ===============================
+
+async function initializeDatabase() {
   try {
-    // 1. Ensure table exists with base columns
+    // Base table
     await dbRun(`
       CREATE TABLE IF NOT EXISTS parcels (
         id TEXT PRIMARY KEY,
@@ -53,43 +69,106 @@ async function runSchemaOnlyMigration() {
       )
     `);
 
-    // 2. Inspect existing table structure
-    const existingColumns = await dbAll("PRAGMA table_info(parcels)");
-    const existingColumnNames = existingColumns.map(col => col.name);
+    // Additional columns
+    const targetColumns = [
+      { name: 'flat_number', type: 'TEXT' },
+      { name: 'rent', type: 'REAL' },
+      { name: 'phone_number', type: 'TEXT' },
+      { name: 'address', type: 'TEXT' },
+      { name: 'elevation', type: 'REAL' },
+      { name: 'number_of_floors', type: 'INTEGER' },
+      { name: 'building_height', type: 'REAL' },
+      { name: 'usage', type: 'TEXT' },
+      { name: 'volumetric_space', type: 'REAL' }
+    ];
 
-    // 3. Sequentially add only the missing columns (NULL values allowed)
-    for (const col of targetColumns) {
-      if (!existingColumnNames.includes(col.name)) {
-        const alterSql = `ALTER TABLE parcels ADD COLUMN ${col.name} ${col.type}`;
-        await dbRun(alterSql);
-        console.log(`Successfully added missing column: ${col.name}`);
+    const existingColumns = await dbAll(
+      'PRAGMA table_info(parcels)'
+    );
+
+    const existingColumnNames = existingColumns.map(
+      column => column.name
+    );
+
+    for (const column of targetColumns) {
+      if (!existingColumnNames.includes(column.name)) {
+        await dbRun(
+          `ALTER TABLE parcels ADD COLUMN ${column.name} ${column.type}`
+        );
+
+        console.log(
+          `✅ Added column: ${column.name}`
+        );
       }
     }
 
-    // 4. Seed ONLY IF table is completely empty (no existing records)
-    const row = await dbGet("SELECT COUNT(*) as count FROM parcels");
-    if (row && row.count === 0) {
-      console.log("Database completely empty. Initializing baseline seed data...");
+    // Seed only if database is completely empty
+    const countResult = await dbGet(
+      'SELECT COUNT(*) AS count FROM parcels'
+    );
+
+    if (countResult.count === 0) {
+      console.log('📦 Database empty. Adding seed parcels...');
+
       await dbRun(`
         INSERT INTO parcels (
-          id, title, owner_name, area_sq_ft, status, coordinates
-        ) VALUES 
-        ('p101', 'Sunrise Villa', 'Rahul Sharma', 1200, 'occupied', '[77.5946, 12.9716]'),
-        ('p102', 'Green Acres', 'Priya Singh', 2500, 'vacant', '[77.6, 12.975]'),
-        ('p103', 'Ocean View', 'Amit Kumar', 1800, 'vacant', '[77.61, 12.98]')
+          id,
+          title,
+          owner_name,
+          area_sq_ft,
+          status,
+          coordinates
+        )
+        VALUES
+        (
+          'p101',
+          'Sunrise Villa',
+          'Rahul Sharma',
+          1200,
+          'occupied',
+          '[77.5946, 12.9716]'
+        ),
+        (
+          'p102',
+          'Green Acres',
+          'Priya Singh',
+          2500,
+          'vacant',
+          '[77.6, 12.975]'
+        ),
+        (
+          'p103',
+          'Ocean View',
+          'Amit Kumar',
+          1800,
+          'vacant',
+          '[77.61, 12.98]'
+        )
       `);
+
+      console.log('✅ Seed data added');
     } else {
-      console.log(`Existing database found with ${row.count} records. No rows altered or seeded.`);
+      console.log(
+        `ℹ️ Existing database found with ${countResult.count} parcels`
+      );
     }
 
+    console.log('✅ Database initialization completed');
+
   } catch (error) {
-    console.error("Schema migration error:", error);
+    console.error(
+      '❌ Database initialization failed:',
+      error.message
+    );
+
+    throw error;
   }
 }
 
-// Execute migration on startup
-db.serialize(() => {
-  runSchemaOnlyMigration();
-});
-
-module.exports = db;
+module.exports = {
+  db,
+  dbRun,
+  dbAll,
+  dbGet,
+  initializeDatabase
+};

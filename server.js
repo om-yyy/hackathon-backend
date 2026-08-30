@@ -1,44 +1,48 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
-const db = require('./db');
+
+const {
+  dbRun,
+  dbAll,
+  dbGet,
+  initializeDatabase
+} = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// =========================
+// ===============================
 // MIDDLEWARE
-// =========================
+// ===============================
+
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
-// =========================
+// ===============================
 // HEALTH CHECK
-// =========================
+// ===============================
+
 app.get('/', (req, res) => {
   res.json({
-    message: 'Hackathon Backend API is running!',
-    status: 'success'
+    success: true,
+    message: 'Hackathon Backend API is running',
+    endpoints: {
+      parcels: '/api/parcels'
+    }
   });
 });
 
-// ============================================================
-// 1. GET ALL PARCELS
+// ===============================
+// GET ALL PARCELS
 // GET /api/parcels
-// ============================================================
-app.get('/api/parcels', (req, res) => {
-  const sql = 'SELECT * FROM parcels';
+// ===============================
 
-  db.all(sql, [], (err, rows) => {
-    if (err) {
-      console.error('GET ALL ERROR:', err.message);
-
-      return res.status(500).json({
-        success: false,
-        error: err.message
-      });
-    }
+app.get('/api/parcels', async (req, res, next) => {
+  try {
+    const rows = await dbAll('SELECT * FROM parcels');
 
     const formattedRows = rows.map(row => {
       let coordinates = [];
@@ -60,27 +64,25 @@ app.get('/api/parcels', (req, res) => {
     });
 
     res.status(200).json(formattedRows);
-  });
+
+  } catch (error) {
+    next(error);
+  }
 });
 
-// ============================================================
-// 2. GET SINGLE PARCEL
+// ===============================
+// GET SINGLE PARCEL
 // GET /api/parcels/:id
-// ============================================================
-app.get('/api/parcels/:id', (req, res) => {
-  const { id } = req.params;
+// ===============================
 
-  const sql = 'SELECT * FROM parcels WHERE id = ?';
+app.get('/api/parcels/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-  db.get(sql, [id], (err, row) => {
-    if (err) {
-      console.error('GET BY ID ERROR:', err.message);
-
-      return res.status(500).json({
-        success: false,
-        error: err.message
-      });
-    }
+    const row = await dbGet(
+      'SELECT * FROM parcels WHERE id = ?',
+      [id]
+    );
 
     if (!row) {
       return res.status(404).json({
@@ -99,70 +101,30 @@ app.get('/api/parcels/:id', (req, res) => {
       coordinates = [];
     }
 
-    const parcel = {
+    res.status(200).json({
       ...row,
       coordinates
-    };
+    });
 
-    res.status(200).json(parcel);
-  });
+  } catch (error) {
+    next(error);
+  }
 });
 
-// ============================================================
-// 3. CREATE PARCEL
+// ===============================
+// CREATE PARCEL
 // POST /api/parcels
-// ============================================================
-app.post('/api/parcels', (req, res) => {
-  const {
-    id,
-    title,
-    coordinates,
-    area_sq_ft,
-    status,
-    owner_name,
-    flat_number,
-    rent,
-    phone_number,
-    address,
-    elevation,
-    number_of_floors,
-    building_height,
-    usage,
-    volumetric_space
-  } = req.body;
+// ===============================
 
-  // Basic validation
-  if (!title) {
-    return res.status(400).json({
-      success: false,
-      message: 'title is required'
-    });
-  }
-
-  if (!owner_name) {
-    return res.status(400).json({
-      success: false,
-      message: 'owner_name is required'
-    });
-  }
-
-  if (!area_sq_ft) {
-    return res.status(400).json({
-      success: false,
-      message: 'area_sq_ft is required'
-    });
-  }
-
-  const generatedId = id || `p_${Date.now()}`;
-
-  const sql = `
-    INSERT INTO parcels (
+app.post('/api/parcels', async (req, res, next) => {
+  try {
+    const {
       id,
       title,
-      owner_name,
+      coordinates,
       area_sq_ft,
       status,
-      coordinates,
+      owner_name,
       flat_number,
       rent,
       phone_number,
@@ -172,228 +134,212 @@ app.post('/api/parcels', (req, res) => {
       building_height,
       usage,
       volumetric_space
-    )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+    } = req.body;
 
-  const params = [
-    generatedId,
-    title,
-    owner_name,
-    area_sq_ft,
-    status || 'vacant',
-    JSON.stringify(coordinates || []),
-    flat_number || null,
-    rent ?? null,
-    phone_number || null,
-    address || null,
-    elevation ?? null,
-    number_of_floors ?? null,
-    building_height ?? null,
-    usage || null,
-    volumetric_space ?? null
-  ];
+    const generatedId = id || `p_${Date.now()}`;
 
-  db.run(sql, params, function (err) {
-    if (err) {
-      console.error('POST ERROR:', err.message);
+    const sql = `
+      INSERT INTO parcels (
+        id,
+        title,
+        coordinates,
+        area_sq_ft,
+        status,
+        owner_name,
+        flat_number,
+        rent,
+        phone_number,
+        address,
+        elevation,
+        number_of_floors,
+        building_height,
+        usage,
+        volumetric_space
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
 
-      return res.status(400).json({
-        success: false,
-        error: err.message
-      });
-    }
+    const params = [
+      generatedId,
+      title || '',
+      JSON.stringify(coordinates || []),
+      area_sq_ft || 0,
+      status || 'vacant',
+      owner_name || '',
+      flat_number || '',
+      rent || 0,
+      phone_number || '',
+      address || '',
+      elevation || 0,
+      number_of_floors || 0,
+      building_height || 0,
+      usage || '',
+      volumetric_space || 0
+    ];
+
+    await dbRun(sql, params);
 
     res.status(201).json({
       success: true,
       message: 'Parcel added successfully!',
       id: generatedId
     });
-  });
+
+  } catch (error) {
+    next(error);
+  }
 });
 
-// ============================================================
-// 4. UPDATE PARCEL
+// ===============================
+// UPDATE PARCEL
 // PUT /api/parcels/:id
-// ============================================================
-app.put('/api/parcels/:id', (req, res) => {
-  const { id } = req.params;
+// ===============================
 
-  const {
-    title,
-    coordinates,
-    area_sq_ft,
-    status,
-    owner_name,
-    flat_number,
-    rent,
-    phone_number,
-    address,
-    elevation,
-    number_of_floors,
-    building_height,
-    usage,
-    volumetric_space
-  } = req.body;
+app.put('/api/parcels/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-  // First check if parcel exists
-  db.get(
-    'SELECT * FROM parcels WHERE id = ?',
-    [id],
-    (checkErr, existingParcel) => {
-      if (checkErr) {
-        return res.status(500).json({
-          success: false,
-          error: checkErr.message
-        });
-      }
+    const existingParcel = await dbGet(
+      'SELECT * FROM parcels WHERE id = ?',
+      [id]
+    );
 
-      if (!existingParcel) {
-        return res.status(404).json({
-          success: false,
-          message: 'Parcel not found'
-        });
-      }
-
-      const sql = `
-        UPDATE parcels SET
-          title = ?,
-          owner_name = ?,
-          area_sq_ft = ?,
-          status = ?,
-          coordinates = ?,
-          flat_number = ?,
-          rent = ?,
-          phone_number = ?,
-          address = ?,
-          elevation = ?,
-          number_of_floors = ?,
-          building_height = ?,
-          usage = ?,
-          volumetric_space = ?
-        WHERE id = ?
-      `;
-
-      const params = [
-        title ?? existingParcel.title,
-        owner_name ?? existingParcel.owner_name,
-        area_sq_ft ?? existingParcel.area_sq_ft,
-        status ?? existingParcel.status,
-        coordinates !== undefined
-          ? JSON.stringify(coordinates)
-          : existingParcel.coordinates,
-        flat_number ?? existingParcel.flat_number,
-        rent ?? existingParcel.rent,
-        phone_number ?? existingParcel.phone_number,
-        address ?? existingParcel.address,
-        elevation ?? existingParcel.elevation,
-        number_of_floors ?? existingParcel.number_of_floors,
-        building_height ?? existingParcel.building_height,
-        usage ?? existingParcel.usage,
-        volumetric_space ?? existingParcel.volumetric_space,
-        id
-      ];
-
-      db.run(sql, params, function (err) {
-        if (err) {
-          console.error('PUT ERROR:', err.message);
-
-          return res.status(400).json({
-            success: false,
-            error: err.message
-          });
-        }
-
-        // Fetch updated parcel
-        db.get(
-          'SELECT * FROM parcels WHERE id = ?',
-          [id],
-          (getErr, updatedParcel) => {
-            if (getErr) {
-              return res.status(500).json({
-                success: false,
-                error: getErr.message
-              });
-            }
-
-            let parsedCoordinates = [];
-
-            try {
-              parsedCoordinates = JSON.parse(
-                updatedParcel.coordinates || '[]'
-              );
-            } catch (error) {
-              parsedCoordinates = [];
-            }
-
-            res.status(200).json({
-              success: true,
-              message: 'Parcel updated successfully!',
-              parcel: {
-                ...updatedParcel,
-                coordinates: parsedCoordinates
-              }
-            });
-          }
-        );
+    if (!existingParcel) {
+      return res.status(404).json({
+        success: false,
+        message: 'Parcel not found'
       });
     }
-  );
-});
 
-// ============================================================
-// 5. DELETE PARCEL
-// DELETE /api/parcels/:id
-// ============================================================
-app.delete('/api/parcels/:id', (req, res) => {
-  const { id } = req.params;
+    const {
+      title,
+      coordinates,
+      area_sq_ft,
+      status,
+      owner_name,
+      flat_number,
+      rent,
+      phone_number,
+      address,
+      elevation,
+      number_of_floors,
+      building_height,
+      usage,
+      volumetric_space
+    } = req.body;
 
-  // Check first
-  db.get(
-    'SELECT * FROM parcels WHERE id = ?',
-    [id],
-    (checkErr, parcel) => {
-      if (checkErr) {
-        return res.status(500).json({
-          success: false,
-          error: checkErr.message
-        });
-      }
+    const sql = `
+      UPDATE parcels
+      SET
+        title = ?,
+        coordinates = ?,
+        area_sq_ft = ?,
+        status = ?,
+        owner_name = ?,
+        flat_number = ?,
+        rent = ?,
+        phone_number = ?,
+        address = ?,
+        elevation = ?,
+        number_of_floors = ?,
+        building_height = ?,
+        usage = ?,
+        volumetric_space = ?
+      WHERE id = ?
+    `;
 
-      if (!parcel) {
-        return res.status(404).json({
-          success: false,
-          message: 'Parcel not found'
-        });
-      }
+    const params = [
+      title ?? existingParcel.title,
+      JSON.stringify(
+        coordinates ?? JSON.parse(existingParcel.coordinates || '[]')
+      ),
+      area_sq_ft ?? existingParcel.area_sq_ft,
+      status ?? existingParcel.status,
+      owner_name ?? existingParcel.owner_name,
+      flat_number ?? existingParcel.flat_number,
+      rent ?? existingParcel.rent,
+      phone_number ?? existingParcel.phone_number,
+      address ?? existingParcel.address,
+      elevation ?? existingParcel.elevation,
+      number_of_floors ?? existingParcel.number_of_floors,
+      building_height ?? existingParcel.building_height,
+      usage ?? existingParcel.usage,
+      volumetric_space ?? existingParcel.volumetric_space,
+      id
+    ];
 
-      db.run(
-        'DELETE FROM parcels WHERE id = ?',
-        [id],
-        function (err) {
-          if (err) {
-            console.error('DELETE ERROR:', err.message);
+    await dbRun(sql, params);
 
-            return res.status(500).json({
-              success: false,
-              error: err.message
-            });
-          }
+    const updatedParcel = await dbGet(
+      'SELECT * FROM parcels WHERE id = ?',
+      [id]
+    );
 
-          res.status(200).json({
-            success: true,
-            message: 'Parcel deleted successfully!',
-            id
-          });
-        }
+    let parsedCoordinates = [];
+
+    try {
+      parsedCoordinates = JSON.parse(
+        updatedParcel.coordinates || '[]'
       );
+    } catch (error) {
+      parsedCoordinates = [];
     }
-  );
+
+    res.status(200).json({
+      success: true,
+      message: 'Parcel updated successfully!',
+      parcel: {
+        ...updatedParcel,
+        coordinates: parsedCoordinates
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
 });
 
-// ============================================================
+// ===============================
+// DELETE PARCEL
+// DELETE /api/parcels/:id
+// ===============================
+
+app.delete('/api/parcels/:id', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const existingParcel = await dbGet(
+      'SELECT * FROM parcels WHERE id = ?',
+      [id]
+    );
+
+    if (!existingParcel) {
+      return res.status(404).json({
+        success: false,
+        message: 'Parcel not found'
+      });
+    }
+
+    await dbRun(
+      'DELETE FROM parcels WHERE id = ?',
+      [id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Parcel deleted successfully!',
+      id
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ===============================
 // 404 HANDLER
-// ============================================================
+// ===============================
+
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -401,9 +347,10 @@ app.use((req, res) => {
   });
 });
 
-// ============================================================
-// GLOBAL ERROR HANDLER
-// ============================================================
+// ===============================
+// CENTRAL ERROR HANDLER
+// ===============================
+
 app.use((err, req, res, next) => {
   console.error('SERVER ERROR:', err);
 
@@ -414,9 +361,27 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ============================================================
+// ===============================
 // START SERVER
-// ============================================================
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// ===============================
+
+async function startServer() {
+  try {
+    await initializeDatabase();
+
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log('✅ SQLite database connected');
+    });
+
+  } catch (error) {
+    console.error(
+      '❌ Server failed to start:',
+      error.message
+    );
+
+    process.exit(1);
+  }
+}
+
+startServer();
